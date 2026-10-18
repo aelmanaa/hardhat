@@ -8,6 +8,7 @@ import {
   HardhatError,
 } from "@nomicfoundation/hardhat-errors";
 import { createDebug } from "@nomicfoundation/hardhat-utils/debug";
+import { ensureError } from "@nomicfoundation/hardhat-utils/error";
 import { ensureDir, exists } from "@nomicfoundation/hardhat-utils/fs";
 
 import { BUILD_INFO_DIR_NAME } from "../artifacts/artifact-manager.js";
@@ -19,7 +20,15 @@ import {
   formatEdrNetworkConfigAccounts,
 } from "./helpers.js";
 import { JsonRpcServerImplementation } from "./json-rpc/server.js";
+import { onShutdownSignal } from "./state/shutdown-signals.js";
+import {
+  dumpResultToJson,
+  jsonToLoadParam,
+  readStateFile,
+  writeStateFile,
+} from "./state/state-file.js";
 import { resolveNodeConnectionParams } from "./utils/resolve-node-connection-params.js";
+import { resolveNodeStateParams } from "./utils/resolve-node-state-params.js";
 
 const log = createDebug("hardhat:core:tasks:node");
 
@@ -30,6 +39,9 @@ interface NodeActionArguments {
   chainId: number;
   fork?: string;
   forkBlockNumber: number;
+  state?: string;
+  loadState?: string;
+  dumpState?: string;
 }
 
 const nodeAction: NewTaskActionFunction<NodeActionArguments> = async (
@@ -55,6 +67,7 @@ const nodeAction: NewTaskActionFunction<NodeActionArguments> = async (
   }
 
   const connectionParams = resolveNodeConnectionParams(network, args);
+  const stateParams = await resolveNodeStateParams(args, process.cwd());
 
   // NOTE: This is where we initialize the network; the create method returns
   // a fully resolved networkConfig object which might be useful for display
@@ -65,6 +78,25 @@ const nodeAction: NewTaskActionFunction<NodeActionArguments> = async (
     provider instanceof EdrProvider,
     "Provider must be EdrProvider, since only edr networks are supported",
   );
+
+  if (stateParams.loadPath !== undefined) {
+    try {
+      const json = await readStateFile(stateParams.loadPath);
+      await provider.request({
+        method: "hardhat_loadState",
+        params: [jsonToLoadParam(json)],
+      });
+    } catch (error) {
+      ensureError(error);
+      throw new HardhatError(
+        HardhatError.ERRORS.CORE.NODE.LOAD_STATE_FAILED,
+        { path: stateParams.loadPath, reason: error.message },
+        error,
+      );
+    }
+
+    console.log(`Loaded the state from ${stateParams.loadPath}`);
+  }
 
   // NOTE: We enable logging for the node
   await provider.request({
@@ -121,8 +153,41 @@ const nodeAction: NewTaskActionFunction<NodeActionArguments> = async (
 
   console.log(await formatEdrNetworkConfigAccounts(networkConfig.accounts));
 
+  let dumpError: Error | undefined;
+  const dumpPath = stateParams.dumpPath;
+  const removeShutdownListeners =
+    dumpPath === undefined
+      ? () => {}
+      : onShutdownSignal(async () => {
+          try {
+            const dumpResult = await provider.request({
+              method: "hardhat_dumpState",
+            });
+            assertHardhatInvariant(
+              typeof dumpResult === "string",
+              "hardhat_dumpState should return a string",
+            );
+            await writeStateFile(dumpPath, await dumpResultToJson(dumpResult));
+            console.log(`Saved the state to ${dumpPath}`);
+          } catch (error) {
+            ensureError(error);
+            dumpError = error;
+          } finally {
+            await server.close();
+          }
+        });
+
   await server.afterClosed();
+  removeShutdownListeners();
   await buildInfoWatcher.close();
+
+  if (dumpPath !== undefined && dumpError !== undefined) {
+    throw new HardhatError(
+      HardhatError.ERRORS.CORE.NODE.DUMP_STATE_FAILED,
+      { path: dumpPath, reason: dumpError.message },
+      dumpError,
+    );
+  }
 };
 
 export default nodeAction;

@@ -47,6 +47,25 @@ const hardhatPlugin: HardhatPlugin = definePlugin({
         type: ArgumentType.INT,
         defaultValue: -1,
       })
+      .addOption({
+        name: "state",
+        description:
+          "A file to load the node's accounts from when it starts, if the file exists, and to save them to when it stops",
+        type: ArgumentType.FILE_WITHOUT_DEFAULT,
+        defaultValue: undefined,
+      })
+      .addOption({
+        name: "loadState",
+        description: "A file to load the node's accounts from when it starts",
+        type: ArgumentType.FILE_WITHOUT_DEFAULT,
+        defaultValue: undefined,
+      })
+      .addOption({
+        name: "dumpState",
+        description: "A file to save the node's accounts to when it stops",
+        type: ArgumentType.FILE_WITHOUT_DEFAULT,
+        defaultValue: undefined,
+      })
       .setAction(async () => await import("./task-action.js"))
       .build(),
   ],

@@ -1736,6 +1736,30 @@ Please use the fully qualified name of the contract to disambiguate it.`,
         websiteTitle: "Invalid node network type",
         websiteDescription: `The node only supports the 'edr-simulated' network type.`,
       },
+      LOAD_STATE_FILE_NOT_FOUND: {
+        number: 1101,
+        messageTemplate: `The state file "{path}" passed to --load-state doesn't exist.`,
+        websiteTitle: "State file not found",
+        websiteDescription: `The file passed to \`--load-state\` doesn't exist.
+
+Please check the path. To start without a state and save one on exit, use \`--state\` or \`--dump-state\` instead.`,
+      },
+      LOAD_STATE_FAILED: {
+        number: 1102,
+        messageTemplate: `Couldn't load the state from "{path}": {reason}`,
+        websiteTitle: "Couldn't load the node's state",
+        websiteDescription: `Hardhat couldn't load the state file into the node. The message says why, for example because the file isn't a valid state dump.
+
+Please check that the file was written by \`hardhat node --dump-state\`, \`hardhat_dumpState\`, or \`anvil_dumpState\`.`,
+      },
+      DUMP_STATE_FAILED: {
+        number: 1103,
+        messageTemplate: `Couldn't save the state to "{path}": {reason}`,
+        websiteTitle: "Couldn't save the node's state",
+        websiteDescription: `Hardhat couldn't save the node's state when it stopped. The message says why, for example because the directory isn't writable.
+
+Please check the path and its permissions. The previous state file, if any, is left unchanged.`,
+      },
     },
     TEST_PLUGIN: {
       CANNOT_DETERMINE_TEST_RUNNER: {
