@@ -90,7 +90,9 @@ export function toHardhatError(
       {
         verificationProvider: explorerName,
         contract,
-        reason: error.message,
+        // explorer-verify names the backend, e.g. "etherscan-v2"; Hardhat's
+        // messages name the explorer.
+        reason: error.message.replaceAll(details.handle.backend, explorerName),
         handle: formatHandle(details.handle),
       },
       error,
