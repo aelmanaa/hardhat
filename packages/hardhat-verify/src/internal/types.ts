@@ -1,11 +1,8 @@
 import type { Dispatcher } from "@nomicfoundation/hardhat-utils/request";
 import type {
-  BlockExplorerBlockscoutConfig,
   BlockExplorerEtherscanConfig,
-  BlockscoutConfig,
   ChainDescriptorsConfig,
   EtherscanConfig,
-  SourcifyConfig,
   VerificationProvidersConfig,
 } from "hardhat/types/config";
 import type { CompilerInput } from "hardhat/types/solidity";
@@ -47,13 +44,6 @@ export interface ResolveConfigOptions {
   shouldUseCache?: boolean;
 }
 
-export interface CreateBlockscoutOptions {
-  blockExplorerConfig: BlockExplorerBlockscoutConfig;
-  verificationProviderConfig: BlockscoutConfig;
-  dispatcher?: Dispatcher;
-  shouldUseCache?: boolean;
-}
-
 export interface CreateEtherscanOptions {
   blockExplorerConfig: BlockExplorerEtherscanConfig;
   verificationProviderConfig: EtherscanConfig;
@@ -62,42 +52,11 @@ export interface CreateEtherscanOptions {
   shouldUseCache?: boolean;
 }
 
-export interface CreateSourcifyOptions {
-  verificationProviderConfig: SourcifyConfig;
-  chainId: number;
-  dispatcher?: Dispatcher;
-}
-
-export interface VerificationProviderFactory {
-  resolveConfig(
-    options: ResolveConfigOptions,
-  ): Promise<
-    CreateEtherscanOptions | CreateBlockscoutOptions | CreateSourcifyOptions
-  >;
-
-  create(
-    options:
-      CreateEtherscanOptions | CreateBlockscoutOptions | CreateSourcifyOptions,
-  ): Promise<VerificationProvider>;
-
-  getSupportedChains(
-    dispatcher?: Dispatcher,
-    shouldUseCache?: boolean,
-  ): Promise<ChainDescriptorsConfig>;
-}
-
 export interface BaseVerifyFunctionArgs {
   contractAddress: string;
   compilerInput: CompilerInput;
   contractName: string;
   compilerVersion: string;
-}
-
-export interface VerifyFunctionArgs extends BaseVerifyFunctionArgs {
-  /** The constructor arguments (Etherscan & Blockscout only) */
-  constructorArguments?: string;
-  /** The hash of the contract creation transaction (Sourcify only) */
-  creationTxHash?: string;
 }
 
 export interface VerificationProvider {
@@ -109,7 +68,7 @@ export interface VerificationProvider {
 
   isVerified(address: string): Promise<boolean>;
 
-  verify(verifyFunctionArgs: VerifyFunctionArgs): Promise<string>;
+  verify(verifyFunctionArgs: BaseVerifyFunctionArgs): Promise<string>;
 
   pollVerificationStatus(
     guid: string,

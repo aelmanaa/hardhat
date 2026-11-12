@@ -41,6 +41,20 @@ export function extendWithVerificationArgs(
       name: "force",
       description:
         "Force the verification even if the contract is already verified",
+    })
+    .addOption({
+      name: "verificationTimeout",
+      type: ArgumentType.INT,
+      description:
+        "How long to wait for the explorer's result, in seconds (0: no limit)",
+      defaultValue: 0,
+    })
+    .addOption({
+      name: "indexWait",
+      type: ArgumentType.INT,
+      description:
+        "How long to resubmit while the explorer has not indexed the contract, in seconds (0: the default)",
+      defaultValue: 0,
     });
   /* TODO: M5
     .addFlag({

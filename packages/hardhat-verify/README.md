@@ -89,6 +89,22 @@ export default defineConfig({
 });
 ```
 
+### Waiting for a result, and resuming
+
+By default, `verify` waits for each explorer's result with no time limit. To set one, pass `--verification-timeout` in seconds:
+
+```bash
+npx hardhat verify --network mainnet --verification-timeout 120 DEPLOYED_CONTRACT_ADDRESS
+```
+
+When the time runs out after the explorer accepted the source code, the error prints a resume handle. Check the result later without submitting the source code again:
+
+```bash
+npx hardhat verify resume ev1:etherscan-v2:1:0x...:JOB_ID
+```
+
+When a contract was just deployed, an explorer may not have indexed it yet. `verify` resubmits up to 10 times in that case. To wait for a set time instead, pass `--index-wait` in seconds.
+
 ### Programmatic verification
 
 You can also verify contracts programmatically by using the `verifyContract` function from the plugin:
@@ -199,3 +215,5 @@ npx hardhat run --build-profile production scripts/verify.ts
 ## How it works
 
 The plugin works by fetching the bytecode in the given address and using it to check which contract in your project corresponds to it. Besides that, some sanity checks are performed locally to make sure that the verification won't fail.
+
+The requests to the explorers are sent by [explorer-verify](https://github.com/aelmanaa/explorer-verify). It looks the contract up before it submits anything: a contract whose source the explorer already holds is reported as already verified, and nothing is submitted. When the explorer holds the source of another contract at the address, `verify` says so and submits your source. With `--force`, a partial match is submitted again, so the explorer can replace it with an exact one; an exact match is never submitted again.

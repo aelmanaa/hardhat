@@ -1,7 +1,7 @@
 import type { VerifyActionArgs } from "../types.js";
 import type { NewTaskActionFunction } from "hardhat/types/tasks";
 
-import { SOURCIFY_PROVIDER_NAME } from "../../../sourcify.js";
+import { SOURCIFY_PROVIDER_NAME } from "../../../explorers.js";
 import { verifyContract } from "../../../verification.js";
 import { resolveLibraries } from "../../arg-resolution.js";
 

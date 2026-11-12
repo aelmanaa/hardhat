@@ -1589,6 +1589,9 @@ importers:
       cbor2:
         specifier: ^2.0.0
         version: 2.4.1
+      explorer-verify:
+        specifier: ~0.2.1
+        version: 0.2.1
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -4941,6 +4944,10 @@ packages:
   expect-type@1.4.0:
     resolution: {integrity: sha512-KfYbmpRm0VbLjEvVa9yGwCi9GI34xvi7A/HXYWQO65CSD2u3MczUJSuwXKFIxlGsgBQizV9q5J9NHj4VG0n+pA==}
     engines: {node: '>=12.0.0'}
+
+  explorer-verify@0.2.1:
+    resolution: {integrity: sha512-QEENH68rKj12xhjG7KxNnxTN3mq4oN/SnTbUmp3RDsuSBjo5GwV1gdrfS+uS74xCmguKUPEIv3s7gtEGHkiR+Q==}
+    engines: {node: '>=22.18.0'}
 
   exponential-backoff@3.1.3:
     resolution: {integrity: sha512-ZgEeZXj30q+I0EN+CbSSpIyPaJ5HVQD18Z1m+u1FXbAeT94mr1zw50q4q6jiiC447Nl/YTcIYSAftiGqetwXCA==}
@@ -10598,6 +10605,8 @@ snapshots:
   expand-template@2.0.3: {}
 
   expect-type@1.4.0: {}
+
+  explorer-verify@0.2.1: {}
 
   exponential-backoff@3.1.3: {}
 

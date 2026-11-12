@@ -13,8 +13,10 @@ import {
 } from "@nomicfoundation/hardhat-test-utils";
 import { createHardhatRuntimeEnvironment } from "hardhat/hre";
 
-import { ETHERSCAN_API_URL } from "../src/internal/etherscan.js";
-import { VERIFICATION_PROVIDERS } from "../src/internal/verification-providers.js";
+import {
+  ETHERSCAN_API_URL,
+  VERIFICATION_PROVIDER_NAMES,
+} from "../src/internal/constants.js";
 import {
   verifyContract,
   validateArgs,
@@ -346,49 +348,13 @@ describe("verification", () => {
     });
   });
 
-  describe("Provider Factory Pattern", () => {
-    it("VERIFICATION_PROVIDERS should not be empty", () => {
-      const providerCount = Object.keys(VERIFICATION_PROVIDERS).length;
-      assert.ok(
-        providerCount > 0,
-        "VERIFICATION_PROVIDERS should contain providers",
-      );
-    });
-
-    it("all providers should have resolveConfig method", () => {
-      for (const [providerName, provider] of Object.entries(
-        VERIFICATION_PROVIDERS,
-      )) {
-        assert.equal(
-          typeof provider.resolveConfig,
-          "function",
-          `Provider "${providerName}" should have resolveConfig method`,
-        );
-      }
-    });
-
-    it("all providers should have create method", () => {
-      for (const [providerName, provider] of Object.entries(
-        VERIFICATION_PROVIDERS,
-      )) {
-        assert.equal(
-          typeof provider.create,
-          "function",
-          `Provider "${providerName}" should have create method`,
-        );
-      }
-    });
-
-    it("all providers should have getSupportedChains method", () => {
-      for (const [providerName, provider] of Object.entries(
-        VERIFICATION_PROVIDERS,
-      )) {
-        assert.equal(
-          typeof provider.getSupportedChains,
-          "function",
-          `Provider "${providerName}" should have getSupportedChains method`,
-        );
-      }
+  describe("VERIFICATION_PROVIDER_NAMES", () => {
+    it("should list the three providers in the order the verify task runs them", () => {
+      assert.deepEqual(VERIFICATION_PROVIDER_NAMES, [
+        "etherscan",
+        "blockscout",
+        "sourcify",
+      ]);
     });
   });
 
@@ -408,9 +374,8 @@ describe("verification", () => {
           .INVALID_VERIFICATION_PROVIDER,
         {
           verificationProvider: "invalid",
-          supportedVerificationProviders: Object.keys(
-            VERIFICATION_PROVIDERS,
-          ).join(", "),
+          supportedVerificationProviders:
+            VERIFICATION_PROVIDER_NAMES.join(", "),
         },
       );
 
@@ -422,14 +387,24 @@ describe("verification", () => {
           .INVALID_VERIFICATION_PROVIDER,
         {
           verificationProvider: "ethscan",
-          supportedVerificationProviders: Object.keys(
-            VERIFICATION_PROVIDERS,
-          ).join(", "),
+          supportedVerificationProviders:
+            VERIFICATION_PROVIDER_NAMES.join(", "),
         },
       );
     });
   });
 });
+
+// explorer-verify sends every Etherscan request as a form POST to
+// `/v2/api?chainid=<id>`, with the action in the body. The interceptors below
+// match on that action.
+const ETHERSCAN_PATH = /^\/v2\/api\?chainid=\d+$/;
+
+function hasAction(action: string): (body: string | undefined) => boolean {
+  return (body) =>
+    typeof body === "string" &&
+    new URLSearchParams(body).get("action") === action;
+}
 
 /**
  * Mocks a successful Etherscan verification flow.
@@ -444,22 +419,21 @@ function mockEtherscanRequests(interceptable: Interceptable): {
 
   interceptable
     .intercept({
-      path: /^\/(?:v2\/)?api\?action=getsourcecode&address=0x[a-fA-F0-9]{40}&apikey=[A-Za-z0-9]+&chainid=\d+&module=contract$/,
-      method: "GET",
+      path: ETHERSCAN_PATH,
+      method: "POST",
+      body: hasAction("getsourcecode"),
     })
-    .reply(200, { status: "1", result: [{ SourceCode: "" }] });
+    .reply(200, { status: "1", message: "OK", result: [{ SourceCode: "" }] });
 
   interceptable
     .intercept({
-      path: /^\/(?:v2\/)?api\?action=verifysourcecode&apikey=[A-Za-z0-9]+&chainid=\d+&module=contract$/,
+      path: ETHERSCAN_PATH,
       method: "POST",
-      // Always matches; this only captures the body for later assertions.
-      // undici also runs this for requests that don't match the interceptor,
-      // and those have no body, so they are ignored.
       body: (body: string | undefined) => {
-        if (typeof body === "string") {
-          verifyRequestBody = new URLSearchParams(body);
+        if (!hasAction("verifysourcecode")(body)) {
+          return false;
         }
+        verifyRequestBody = new URLSearchParams(body);
         return true;
       },
     })
@@ -471,11 +445,13 @@ function mockEtherscanRequests(interceptable: Interceptable): {
 
   interceptable
     .intercept({
-      path: /^\/(?:v2\/)?api\?action=checkverifystatus&apikey=[A-Za-z0-9]+&chainid=\d+&guid=1234&module=contract$/,
-      method: "GET",
+      path: ETHERSCAN_PATH,
+      method: "POST",
+      body: hasAction("checkverifystatus"),
     })
     .reply(200, {
       status: "1",
+      message: "OK",
       result: "Pass - Verified",
     });
 
@@ -486,33 +462,62 @@ function mockEtherscanRequests(interceptable: Interceptable): {
   };
 }
 
-// Mocks a full Etherscan verification flow: the initial isVerified() lookup
-// (reported as not verified), followed by one verifysourcecode + checkverifystatus
-// pair per entry in `statusResults` (one per verification attempt).
+// Mocks a full Etherscan verification flow. For each entry in `statusResults`
+// (one per verification attempt): the lookup that explorer-verify sends first
+// (reported as not verified), one verifysourcecode + checkverifystatus pair,
+// and, after a failure, the lookup that confirms it.
 function mockEtherscanVerificationFlow(
   interceptable: Interceptable,
   statusResults: string[],
 ) {
-  interceptable
-    .intercept({
-      path: /^\/(?:v2\/)?api\?action=getsourcecode&address=0x[a-fA-F0-9]{40}&apikey=[A-Za-z0-9]+&chainid=\d+&module=contract$/,
-      method: "GET",
-    })
-    .reply(200, { status: "1", result: [{ SourceCode: "" }] });
-
   for (const result of statusResults) {
     interceptable
       .intercept({
-        path: /^\/(?:v2\/)?api\?action=verifysourcecode&apikey=[A-Za-z0-9]+&chainid=\d+&module=contract$/,
+        path: ETHERSCAN_PATH,
         method: "POST",
+        body: hasAction("getsourcecode"),
       })
-      .reply(200, { status: "1", message: "OK", result: "1234" });
+      .reply(200, {
+        status: "1",
+        message: "OK",
+        result: [{ SourceCode: "" }],
+      });
 
     interceptable
       .intercept({
-        path: /^\/(?:v2\/)?api\?action=checkverifystatus&apikey=[A-Za-z0-9]+&chainid=\d+&guid=1234&module=contract$/,
-        method: "GET",
+        path: ETHERSCAN_PATH,
+        method: "POST",
+        body: hasAction("verifysourcecode"),
       })
-      .reply(200, { status: "1", result });
+      .reply(200, { status: "1", message: "OK", result: "1234" });
+
+    const passed = result.startsWith("Pass");
+    interceptable
+      .intercept({
+        path: ETHERSCAN_PATH,
+        method: "POST",
+        body: hasAction("checkverifystatus"),
+      })
+      .reply(200, {
+        status: passed ? "1" : "0",
+        message: passed ? "OK" : "NOTOK",
+        result,
+      });
+
+    if (!passed) {
+      // explorer-verify checks a "Fail - Unable to verify" status with one
+      // more lookup before it reports the failure.
+      interceptable
+        .intercept({
+          path: ETHERSCAN_PATH,
+          method: "POST",
+          body: hasAction("getsourcecode"),
+        })
+        .reply(200, {
+          status: "1",
+          message: "OK",
+          result: [{ SourceCode: "" }],
+        });
+    }
   }
 }

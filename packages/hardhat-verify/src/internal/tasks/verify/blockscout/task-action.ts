@@ -1,7 +1,7 @@
 import type { VerifyActionArgs } from "../types.js";
 import type { NewTaskActionFunction } from "hardhat/types/tasks";
 
-import { BLOCKSCOUT_PROVIDER_NAME } from "../../../blockscout.js";
+import { BLOCKSCOUT_PROVIDER_NAME } from "../../../explorers.js";
 import { verifyContract } from "../../../verification.js";
 import {
   resolveConstructorArgs,

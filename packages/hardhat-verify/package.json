@@ -66,6 +66,7 @@
     "@nomicfoundation/hardhat-utils": "workspace:^5.1.1",
     "@nomicfoundation/hardhat-zod-utils": "workspace:^3.0.5",
     "cbor2": "^2.0.0",
+    "explorer-verify": "~0.2.1",
     "zod": "^3.23.8"
   },
   "peerDependencies": {

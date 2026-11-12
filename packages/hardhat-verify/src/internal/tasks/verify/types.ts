@@ -7,6 +7,8 @@ export interface BaseVerifyActionArgs {
   contract?: string;
   librariesPath?: string;
   force?: boolean;
+  verificationTimeout?: number;
+  indexWait?: number;
   // TODO: M5
   // listNetworks?: boolean;
 }

@@ -16,3 +16,5 @@ minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - hardhat
   - "@nomicfoundation/*"
+  # Proof of concept only: explorer-verify 0.2.1 is newer than minimumReleaseAge.
+  - explorer-verify

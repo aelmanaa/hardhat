@@ -36,14 +36,13 @@ import {
   splitQueryParams,
 } from "@nomicfoundation/hardhat-utils/request";
 
+import { ETHERSCAN_API_URL } from "./constants.js";
+
+export { ETHERSCAN_API_URL };
+
 const log = createDebug("hardhat:verify:etherscan");
 
-export const ETHERSCAN_PROVIDER_NAME: keyof VerificationProvidersConfig =
-  "etherscan";
-
 const VERIFICATION_STATUS_POLLING_SECONDS = 3;
-
-export const ETHERSCAN_API_URL = "https://api.etherscan.io/v2/api";
 
 let supportedChainsCache: ChainDescriptorsConfig | undefined;
 
@@ -659,19 +658,16 @@ export class LazyEtherscanImpl implements LazyEtherscan {
    */
   async #getEtherscan(): Promise<Etherscan> {
     if (this.#etherscan === undefined) {
-      const { createVerificationProviderInstance } =
-        await import("./verification.js");
+      const { getChainId } = await import("./chains.js");
 
-      this.#etherscan =
-        /* eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        -- Cast to Etherscan because we know the provider name is "etherscan" */
-        (await createVerificationProviderInstance({
-          provider: this.#provider,
+      this.#etherscan = await Etherscan.create(
+        await Etherscan.resolveConfig({
+          chainId: await getChainId(this.#provider),
           networkName: this.#networkName,
           chainDescriptors: this.#chainDescriptors,
-          verificationProviderName: "etherscan",
           verificationProvidersConfig: this.#verificationProvidersConfig,
-        })) as Etherscan;
+        }),
+      );
     }
     return this.#etherscan;
   }

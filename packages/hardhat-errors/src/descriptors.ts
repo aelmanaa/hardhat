@@ -3333,6 +3333,18 @@ Please verify the address and network, and try again later if necessary.`,
 
 To resolve this, set a valid non-empty API key in your Hardhat config, then try again.`,
       },
+      VERIFICATION_NOT_CONFIRMED: {
+        number: 80030,
+        messageTemplate: `{verificationProvider} accepted the source code of "{contract}", but the result is not known yet: {reason}
+
+The verification may still succeed. To check it again without submitting the source code again, run:
+
+  npx hardhat verify resume {handle}`,
+        websiteTitle: "Verification submitted but not confirmed",
+        websiteDescription: `The block explorer accepted the verification request, but Hardhat could not read its result. This can happen when the explorer's queue is slow, when the time limit set with --verification-timeout ran out, or when the explorer's status endpoint failed several times in a row.
+
+The message contains a resume handle. Run "npx hardhat verify resume <handle>" to check the result without submitting the source code again.`,
+      },
     },
     VALIDATION: {
       INVALID_ADDRESS: {
